@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Itomata CI/CD Test</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        text-align: center;
+        background-color: #f0f2f5;
+        color: #1c1e21;
+        padding-top: 50px;
+      }
+      .card {
+        background: #ffffff;
+        display: inline-block;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        border-top: 5px solid #232f3e;
+      }
+      .status-box {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        background: #e7f3ff;
+        color: #0056b3;
+        font-weight: bold;
+      }
+      h1 {
+        color: #232f3e;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Itomata System Dashboard</h1>
+      <p>Managed via <b>Terraform</b> & <b>AWS CodePipeline</b></p>
+
+      <div class="status-box">
+        Backend Status: <span id="backend-msg">Loading...</span>
+      </div>
+    </div>
+
+    <script>
+      // This will attempt to call your Flask backend
+      // In a real EKS setup, this would be your LoadBalancer URL
+      fetch("/api/status")
+        .then((response) => response.json())
+        .then((data) => {
+          document.getElementById("backend-msg").innerText =
+            data.message + " (" + data.status + ")";
+        })
+        .catch((err) => {
+          document.getElementById("backend-msg").innerText =
+            "Waiting for Backend...";
+        });
+    </script>
+  </body>
+</html>
