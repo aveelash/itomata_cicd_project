@@ -21,7 +21,7 @@ def home():
 def status():
     return jsonify({
         "status": "Success",
-        "message": "Backend is Connected!"
+        "message": "Backend is Connected Successfully!"
     })
 
 
