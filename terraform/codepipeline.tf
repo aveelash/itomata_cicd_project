@@ -7,7 +7,7 @@ resource "aws_codestarconnections_connection" "github_conn" {
 # 2. S3 Bucket for Pipeline Artifacts
 resource "aws_s3_bucket" "pipeline_artifacts" {
   bucket_prefix = "itomata-pipeline-artifacts-"
-  force_destroy = true # Lowercase fixed
+  force_destroy = true 
 }
 
 # 3. CodeBuild Project
@@ -29,6 +29,12 @@ resource "aws_codebuild_project" "itomata_build" {
       name  = "AWS_ACCOUNT_ID"
       value = data.aws_caller_identity.current.account_id
     }
+
+    # Added so your buildspec.yml knows where to find ECR and EKS
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = "ap-south-1" 
+    }
   }
 
   source {
@@ -40,7 +46,7 @@ resource "aws_codebuild_project" "itomata_build" {
 # 4. The actual CI/CD Pipeline
 resource "aws_codepipeline" "itomata_pipeline" {
   name     = "itomata-cicd-pipeline"
-  role_arn = aws_iam_role.codebuild_role.arn
+  role_arn = aws_iam_role.codebuild_role.arn # In production, use a separate pipeline_role
 
   artifact_store {
     location = aws_s3_bucket.pipeline_artifacts.bucket
@@ -66,7 +72,7 @@ resource "aws_codepipeline" "itomata_pipeline" {
   }
 
   stage {
-    name = "Build"
+    name = "Build_and_Deploy"
     action {
       name             = "Build"
       category         = "Build"
@@ -81,4 +87,46 @@ resource "aws_codepipeline" "itomata_pipeline" {
       }
     }
   }
+}
+
+# 5. FIX: Policy to allow Pipeline to start the Build
+resource "aws_iam_role_policy" "codebuild_lifecycle" {
+  name = "codebuild-lifecycle-policy"
+  role = aws_iam_role.codebuild_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "codebuild:StartBuild",
+          "codebuild:BatchGetBuilds",
+          "codebuild:StopBuild"
+        ]
+        Resource = aws_codebuild_project.itomata_build.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }

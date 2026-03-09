@@ -45,7 +45,7 @@
     <script>
       // This will attempt to call your Flask backend
       // In a real EKS setup, this would be your LoadBalancer URL
-      fetch("/api/status")
+      fetch("http://YOUR_BACKEND_EXTERNAL_IP/api/status")
         .then((response) => response.json())
         .then((data) => {
           document.getElementById("backend-msg").innerText =
