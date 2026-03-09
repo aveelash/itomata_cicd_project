@@ -1,4 +1,4 @@
-# 1. FRONTEND SERVICE (Points to Nginx)
+# 1. FRONTEND SERVICE (Points to Nginx on port 80)
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,7 +12,7 @@ spec:
       port: 80
       targetPort: 80
 ---
-# 2. BACKEND SERVICE (Points to Flask)
+# 2. BACKEND SERVICE (Points to Flask on port 5000)
 apiVersion: v1
 kind: Service
 metadata:
@@ -23,5 +23,5 @@ spec:
     app: itomata
   ports:
     - protocol: TCP
-      port: 80 # The URL will still be http://... (no :5000 needed)
-      targetPort: 5000 # This specifically tells K8s to find the Flask container
+      port: 80 # We use 80 here so the URL looks clean
+      targetPort: 5000 # This is the magic: it directs traffic to your Flask app
