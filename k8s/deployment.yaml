@@ -14,10 +14,10 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 795732143548.dkr.ecr.us-east-1.amazonaws.com/itomata-frontend:latest
+          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
           ports:
             - containerPort: 80
         - name: backend
-          image: 795732143548.dkr.ecr.us-east-1.amazonaws.com/itomata-backend:latest
+          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-backend:latest
           ports:
             - containerPort: 5000

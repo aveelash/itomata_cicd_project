@@ -1,0 +1,19 @@
+apiVersion: v1
+data:
+  mapRoles: |
+    - rolearn: arn:aws:iam::795732143548:role/itomata_nodes-eks-node-group-20260226083801075700000003
+      groups:
+        - system:bootstrappers
+        - system:nodes
+      username: system:node:{{EC2PrivateDNSName}}
+    - rolearn: arn:aws:iam::795732143548:role/itomata-codebuild-role
+      groups:
+        - system:masters
+      username: codebuild
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2026-03-04T16:22:27Z"
+  name: aws-auth
+  namespace: kube-system
+  resourceVersion: "4923"
+  uid: 5bf1edd1-f94d-4ff7-a0e4-18d7e22ae7a6
