@@ -1,7 +1,8 @@
+# 1. FRONTEND SERVICE (Points to Nginx)
 apiVersion: v1
 kind: Service
 metadata:
-  name: itomata-service
+  name: itomata-frontend-service
 spec:
   type: LoadBalancer
   selector:
@@ -10,3 +11,17 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
+---
+# 2. BACKEND SERVICE (Points to Flask)
+apiVersion: v1
+kind: Service
+metadata:
+  name: itomata-backend-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: itomata
+  ports:
+    - protocol: TCP
+      port: 80 # The URL will still be http://... (no :5000 needed)
+      targetPort: 5000 # This specifically tells K8s to find the Flask container
