@@ -24,4 +24,5 @@ phases:
       # UPDATED: We target specific files to avoid the aws-auth conflict
       - kubectl apply -f k8s/deployment.yaml
       - kubectl apply -f k8s/service.yaml
+      - kubectl rollout restart deployment itomata-app
       - echo "Deployment complete!"
