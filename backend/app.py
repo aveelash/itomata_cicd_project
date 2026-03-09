@@ -18,6 +18,7 @@ def home():
 
 
 @app.route('/api/status')
+@app.route('/api/status/')
 def status():
     return jsonify({
         "status": "Success",
