@@ -1,5 +1,5 @@
 # Using Python 3.8 as per your preference
-FROM python:3.8-slim
+FROM public.ecr.aws/docker/library/python:3.8-slim
 
 WORKDIR /app
 
