@@ -14,12 +14,15 @@ phases:
       - docker build -t itomata-backend backend/
   post_build:
     commands:
-      - echo "Pushing images to ECR..."
+      - echo Pushing images to ECR...
       - docker tag itomata-frontend:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-frontend:latest
       - docker tag itomata-backend:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-backend:latest
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-frontend:latest
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-backend:latest
-      - echo "Updating EKS deployment..."
-      # Added --region to ensure kubectl targets ap-south-1
-      - aws eks update-kubeconfig --name itomata-eks-cluster --region $AWS_DEFAULT_REGION
+      - echo Updating EKS deployment...
+      # CRITICAL: Added --region flag
+      - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
+      - echo "Checking if k8s folder exists..."
+      - ls -d k8s/
+      # Applying the manifest
       - kubectl apply -f k8s/
