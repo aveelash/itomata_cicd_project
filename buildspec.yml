@@ -22,6 +22,7 @@ phases:
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
       - echo "Applying application manifests..."
       # UPDATED: We target specific files to avoid the aws-auth conflict
+      - aws sts get-caller-identity
       - kubectl apply -f k8s/deployment.yaml
       - kubectl apply -f k8s/service.yaml
       - kubectl rollout restart deployment itomata-app
