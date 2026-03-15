@@ -18,12 +18,10 @@ phases:
       - docker tag itomata-backend:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-backend:latest
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-frontend:latest
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-backend:latest
-      - echo "Updating EKS deployment..."
+      - echo "Updating EKS deployment via Blue/Green script..."
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
-      - echo "Applying application manifests..."
-      # UPDATED: We target specific files to avoid the aws-auth conflict
       - aws sts get-caller-identity
-      - kubectl apply -f k8s/deployment.yaml
-      - kubectl apply -f k8s/service.yaml
-      - kubectl rollout restart deployment itomata-app
-      - echo "Deployment complete!"
+      # UPDATED: Give the script execution permissions and run it
+      - chmod +x deploy.sh
+      - ./deploy.sh
+      - echo "Blue/Green Deployment complete!"

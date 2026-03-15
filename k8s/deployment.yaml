@@ -1,16 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: itomata-app
+  # We use a placeholder so the script can name it 'itomata-app-v1' or 'v2'
+  name: itomata-app-VERSION_PLACEHOLDER
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: itomata
+      version: VERSION_PLACEHOLDER # New label
   template:
     metadata:
       labels:
         app: itomata
+        version: VERSION_PLACEHOLDER # New label
     spec:
       containers:
         - name: frontend
