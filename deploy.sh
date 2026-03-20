@@ -4,34 +4,38 @@ export AWS_STS_REGIONAL_ENDPOINTS=regional
 echo "Refreshing EKS credentials..."
 aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
 
-# 1. Ask the cluster: "Who is currently getting traffic?"
-# We add '|| echo "v2"' so that if the service is missing, it defaults to v1 as the "next" version.
+# 1. Identify the versions
 CURRENT_VERSION=$(kubectl get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")
 
-# 2. Determine the new version name
 if [ "$CURRENT_VERSION" == "v1" ]; then
     NEXT_VERSION="v2"
+    OLD_VERSION="v1"
 else
     NEXT_VERSION="v1"
+    OLD_VERSION="v2"
 fi
 
-echo "Current Live Version: $CURRENT_VERSION"
-echo "Deploying New Version: $NEXT_VERSION"
+echo "Current Live: $CURRENT_VERSION | Deploying Green: $NEXT_VERSION | Deleting Blue: $OLD_VERSION"
 
-# 3. Replace the placeholder in deployment.yaml
+# 2. Update Deployment Manifest
 sed -i "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml
 
-# 4. Deploy the new version
+# 3. Deploy Green (v2) while Blue (v1) is still taking traffic
 kubectl apply -f k8s/deployment.yaml
 
-# 5. Wait for the new pods to be ready
-echo "Waiting for $NEXT_VERSION to be ready..."
+# 4. HEALTH GATE: Wait for Green to be 100% ready before switching
+echo "Verifying health of $NEXT_VERSION..."
 kubectl rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
 
-# 6. FLIP THE SWITCH: Update the Service
-# Note: We use 'kubectl apply' for the service too, in case it doesn't exist yet!
+# 5. THE SWITCH: Update Service to point to Green
 sed -i "s/version: v1/version: $NEXT_VERSION/g" k8s/service.yaml
 sed -i "s/version: v2/version: $NEXT_VERSION/g" k8s/service.yaml
 kubectl apply -f k8s/service.yaml
 
-echo "Blue/Green Deployment Complete! $NEXT_VERSION is now live."
+# 6. CLEANUP: Delete the old version to save AWS Resources/Cost
+if [ "$CURRENT_VERSION" != "none" ]; then
+    echo "Cleaning up old version ($OLD_VERSION)..."
+    kubectl delete deployment itomata-app-$OLD_VERSION --ignore-not-found=true
+fi
+
+echo "Company-Grade Blue/Green Deployment Complete!"

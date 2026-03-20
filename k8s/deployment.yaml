@@ -1,26 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  # We use a placeholder so the script can name it 'itomata-app-v1' or 'v2'
   name: itomata-app-VERSION_PLACEHOLDER
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: itomata
-      version: VERSION_PLACEHOLDER # New label
+      version: VERSION_PLACEHOLDER
   template:
     metadata:
       labels:
         app: itomata
-        version: VERSION_PLACEHOLDER # New label
+        version: VERSION_PLACEHOLDER
     spec:
       containers:
         - name: frontend
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
           ports:
             - containerPort: 80
+          # Real companies set limits so costs don't explode
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
         - name: backend
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-backend:latest
           ports:
             - containerPort: 5000
+          # READINESS PROBE: Tells K8s "Don't send traffic until the Flask API is ready"
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
