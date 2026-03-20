@@ -38,4 +38,10 @@ if [ "$CURRENT_VERSION" != "none" ]; then
     kubectl delete deployment itomata-app-$OLD_VERSION --ignore-not-found=true
 fi
 
+# 7. UPDATE HPA: Tell the autoscaler to watch the NEW live version
+echo "Updating HPA to watch $NEXT_VERSION..."
+sed -i "s/itomata-app-v1/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml
+sed -i "s/itomata-app-v2/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml
+kubectl apply -f k8s/hpa.yaml
+
 echo "Company-Grade Blue/Green Deployment Complete!"
