@@ -31,6 +31,13 @@ spec:
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-backend:latest
           ports:
             - containerPort: 5000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
           # READINESS PROBE: Tells K8s "Don't send traffic until the Flask API is ready"
           readinessProbe:
             httpGet:
