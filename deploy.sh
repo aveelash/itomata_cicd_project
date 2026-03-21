@@ -33,6 +33,7 @@ sed -i "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml
 kubectl apply -f k8s/deployment.yaml
 
 echo "Verifying health of $NEXT_VERSION..."
+sleep 15
 kubectl rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
 
 sed -i "s/version: v1/version: $NEXT_VERSION/g" k8s/service.yaml
