@@ -1,8 +1,8 @@
 from flask import Flask, jsonify
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # This allows the frontend to communicate with this backend
+CORS(app)
 
 
 @app.route('/')
@@ -13,8 +13,6 @@ def home():
         "status": "Healthy",
         "python_version": "3.8"
     })
-
-# Add this route to match your frontend's fetch("/api/status")
 
 
 @app.route('/api/status')

@@ -21,7 +21,6 @@ phases:
       - echo "Updating EKS deployment via Blue/Green script..."
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
       - aws sts get-caller-identity
-      # UPDATED: Give the script execution permissions and run it
       - chmod +x deploy.sh
       - ./deploy.sh
       - echo "Blue/Green Deployment complete!"

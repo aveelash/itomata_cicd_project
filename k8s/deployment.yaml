@@ -19,7 +19,6 @@ spec:
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
           ports:
             - containerPort: 80
-          # Real companies set limits so costs don't explode
           resources:
             requests:
               memory: "128Mi"
@@ -38,7 +37,6 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "200m"
-          # READINESS PROBE: Tells K8s "Don't send traffic until the Flask API is ready"
           readinessProbe:
             httpGet:
               path: /api/status

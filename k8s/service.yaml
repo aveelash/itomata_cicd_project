@@ -7,13 +7,12 @@ spec:
   type: LoadBalancer
   selector:
     app: itomata
-    version: v1 # <--- ADD THIS LINE. Change to v2 to flip traffic.
+    version: v1
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
 ---
-# 2. BACKEND SERVICE (Stays the same for now)
 apiVersion: v1
 kind: Service
 metadata:
@@ -22,8 +21,6 @@ spec:
   type: LoadBalancer
   selector:
     app: itomata
-    # You can also add 'version: v1' here if you want to swap
-    # the backend simultaneously with the frontend.
   ports:
     - protocol: TCP
       port: 80

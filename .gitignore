@@ -1,16 +1,13 @@
-# Ignore local Terraform data
 **/.terraform/*
 *.tfstate
 *.tfstate.*
 .terraform.tfstate.lock.info
 .terraform.lock.hcl
 
-# Ignore logs and OS junk
 *.log
 .DS_Store
 Thumbs.db
 
-# Ignore Node/Python temporary files
 node_modules/
 __pycache__/
 *.pyc
