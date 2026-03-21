@@ -1,10 +1,10 @@
 #!/bin/bash -e
 export AWS_STS_REGIONAL_ENDPOINTS=regional
 
+# 1. Improved Rollback Logic
 rollback() {
     echo "DEPLOYMENT CRITICAL FAILURE!"
     echo "Initiating emergency cleanup of broken version: $NEXT_VERSION..."
-    # Delete the new (failed) deployment so it doesn't waste resources or cause confusion
     kubectl delete deployment itomata-app-$NEXT_VERSION --ignore-not-found=true
     echo "Cleanup complete. The cluster remains safely on $CURRENT_VERSION."
     exit 1
@@ -13,10 +13,11 @@ rollback() {
 trap 'rollback' ERR
 
 echo "Refreshing EKS credentials..."
-# aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
+# The region/cluster name is handled by the CodePipeline environment variables or manual update-kubeconfig
 
-
-CURRENT_VERSION=$(kubectl get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")
+# 2. Identify Current State
+# We check the Service to see who is currently receiving traffic
+CURRENT_VERSION=$(kubectl get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "v1")
 
 if [ "$CURRENT_VERSION" == "v1" ]; then
     NEXT_VERSION="v2"
@@ -28,26 +29,34 @@ fi
 
 echo "Current Live: $CURRENT_VERSION | Deploying Green: $NEXT_VERSION | Deleting Blue: $OLD_VERSION"
 
-sed -i "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml
+# 3. Safe Substitution (Using a temporary file to keep the original manifest clean)
+# This prevents the "VERSION_PLACEHOLDER is missing" error on the second run
+sed "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml > k8s/deployment_tmp.yaml
+kubectl apply -f k8s/deployment_tmp.yaml
 
-kubectl apply -f k8s/deployment.yaml
+# 4. Wait for Existence & Health
+echo "Waiting for $NEXT_VERSION to appear in EKS..."
+sleep 10 # Give the API a moment to register the new deployment
 
 echo "Verifying health of $NEXT_VERSION..."
-sleep 15
 kubectl rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
 
-sed -i "s/version: v1/version: $NEXT_VERSION/g" k8s/service.yaml
-sed -i "s/version: v2/version: $NEXT_VERSION/g" k8s/service.yaml
-kubectl apply -f k8s/service.yaml
+# 5. Switch Traffic (Update Service)
+# We create a temp service file to avoid corrupting the original
+sed "s/version: .*/version: $NEXT_VERSION/g" k8s/service.yaml > k8s/service_tmp.yaml
+kubectl apply -f k8s/service_tmp.yaml
 
-if [ "$CURRENT_VERSION" != "none" ]; then
+# 6. Post-Deployment Cleanup
+if [ "$CURRENT_VERSION" != "none" ] && [ "$CURRENT_VERSION" != "$NEXT_VERSION" ]; then
     echo "Cleanup: Removing $OLD_VERSION..."
     kubectl delete deployment itomata-app-$OLD_VERSION --ignore-not-found=true
 fi
 
-echo "Updating HPA to watch $NEXT_VERSION..."
-sed -i "s/itomata-app-v1/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml
-sed -i "s/itomata-app-v2/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml
-kubectl apply -f k8s/hpa.yaml
+# 7. Update HPA
+sed "s/itomata-app-.*/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml > k8s/hpa_tmp.yaml
+kubectl apply -f k8s/hpa_tmp.yaml
+
+# 8. Clean up temporary files
+rm k8s/*_tmp.yaml
 
 echo "Company-Grade Blue/Green Deployment Complete!"
