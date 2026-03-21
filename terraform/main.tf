@@ -3,7 +3,7 @@ data "aws_caller_identity" "current" {}
 
 # IAM Role that both CodeBuild and CodePipeline will use
 resource "aws_iam_role" "codebuild_role" {
-  name = "itomata-codebuild-role"
+  name = "itomata-codebuild-role-${var.region}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

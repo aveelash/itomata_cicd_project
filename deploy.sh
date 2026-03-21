@@ -13,7 +13,7 @@ rollback() {
 trap 'rollback' ERR
 
 echo "Refreshing EKS credentials..."
-aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
+# aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
 
 
 CURRENT_VERSION=$(kubectl get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")

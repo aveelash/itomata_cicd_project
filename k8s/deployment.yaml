@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: itomata-app-VERSION_PLACEHOLDER
+  name: itomata-app-v1
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: itomata
-      version: VERSION_PLACEHOLDER
+      version: v1
   template:
     metadata:
       labels:
         app: itomata
-        version: VERSION_PLACEHOLDER
+        version: v1
     spec:
       containers:
         - name: frontend

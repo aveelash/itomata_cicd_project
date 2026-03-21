@@ -32,7 +32,7 @@ resource "aws_codebuild_project" "itomata_build" {
 
     environment_variable {
       name  = "AWS_DEFAULT_REGION"
-      value = "ap-south-1" 
+      value = var.region # Use the variable, not "ap-south-1"
     }
   }
 

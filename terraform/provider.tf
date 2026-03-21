@@ -8,5 +8,5 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-south-1" 
+  region = var.region # This now follows the variable
 }
