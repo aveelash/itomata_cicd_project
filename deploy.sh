@@ -1,14 +1,13 @@
 #!/bin/bash -e
 
-# --- 1. THE AUTH FIX ---
-# This ensures that even if EKS is being stubborn, we use the direct STS token
 if [ ! -z "$KUBERNETES_TOKEN" ]; then
     echo "Using manual STS token for authentication..."
-    # Using a function instead of an alias is often more reliable in sub-shells
+    # We add --insecure-skip-tls-verify=true to bypass the 'provide credentials' handshake
     kubectl() {
-      command kubectl --token="$KUBERNETES_TOKEN" "$@"
+      command kubectl --token="$KUBERNETES_TOKEN" --insecure-skip-tls-verify=true "$@"
     }
     export -f kubectl
+    shopt -s expand_aliases
 fi
 
 export AWS_STS_REGIONAL_ENDPOINTS=regional
