@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  variables:
+    # This forces the build to use regional credentials, fixing the EKS handshake
+    AWS_STS_REGIONAL_ENDPOINTS: "regional"
+
 phases:
   pre_build:
     commands:
@@ -26,11 +31,13 @@ phases:
 
       # --- REGION 1: MUMBAI ---
       - echo "🚀 Deploying to Mumbai (ap-south-1)..."
+      - export AWS_DEFAULT_REGION=ap-south-1
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
       - ./deploy.sh
 
       # --- REGION 2: VIRGINIA ---
       - echo "🚀 Deploying to Virginia (us-east-1)..."
+      - export AWS_DEFAULT_REGION=us-east-1
       - aws eks update-kubeconfig --region us-east-1 --name itomata-eks-cluster
       - ./deploy.sh
 
