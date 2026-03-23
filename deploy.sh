@@ -1,66 +1,61 @@
 #!/bin/bash -e
 
-echo "🛠️ Hard-resetting EKS configuration for $AWS_DEFAULT_REGION..."
+# Use standard kubectl (context is already set by buildspec)
+KUBE="kubectl"
 
-# 1. Clean everything
-rm -rf ~/.kube
-mkdir -p ~/.kube
+echo "Running deployment for region: $AWS_DEFAULT_REGION"
 
-# 2. Get the token manually one time
-TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region $AWS_DEFAULT_REGION | jq -r '.status.token')
-ENDPOINT=$(aws eks describe-cluster --name itomata-eks-cluster --region $AWS_DEFAULT_REGION --query "cluster.endpoint" --output text)
+# 1. Improved Rollback Logic
+rollback() {
+    echo "DEPLOYMENT CRITICAL FAILURE in $AWS_DEFAULT_REGION!"
+    $KUBE delete deployment itomata-app-$NEXT_VERSION --ignore-not-found=true
+    exit 1
+}
 
-# 3. Create a static config that DOES NOT use 'exec' or 'aws cli'
-# This removes the 'server asked for credentials' loop entirely
-cat <<EOF > ~/.kube/config
-apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    insecure-skip-tls-verify: true
-    server: $ENDPOINT
-  name: eks-cluster
-contexts:
-- context:
-    cluster: eks-cluster
-    user: codebuild
-  name: eks-context
-current-context: eks-context
-users:
-- name: codebuild
-  user:
-    token: $TOKEN
-EOF
+trap 'rollback' ERR
 
-# 4. Define the command with global flags to force authentication
-KUBE="kubectl --kubeconfig=$HOME/.kube/config --insecure-skip-tls-verify"
-
-# --- Deployment Logic ---
-echo "Checking cluster connection..."
-# This is the test command - if this fails, the role permissions are the issue
-$KUBE version || echo "Connection test failed, but attempting anyway..."
-
+# 2. Identify Current State
 CURRENT_VERSION=$($KUBE get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")
-NEXT_VERSION="v1"
-[ "$CURRENT_VERSION" == "v1" ] && NEXT_VERSION="v2"
 
-echo "Current: $CURRENT_VERSION | Deploying: $NEXT_VERSION"
-
-# APPLY - Using --validate=false to skip the problematic OpenAPI download
-sed "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml > k8s/deployment_tmp.yaml
-$KUBE apply -f k8s/deployment_tmp.yaml --validate=false
-
-echo "Waiting for rollout..."
-$KUBE rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
-
-# SWITCH TRAFFIC
-sed "s/version: .*/version: $NEXT_VERSION/g" k8s/service.yaml > k8s/service_tmp.yaml
-$KUBE apply -f k8s/service_tmp.yaml --validate=false
-
-# CLEANUP
-if [ "$CURRENT_VERSION" != "none" ]; then
-    $KUBE delete deployment itomata-app-$CURRENT_VERSION --ignore-not-found=true
+if [ "$CURRENT_VERSION" == "none" ]; then
+    echo "First deployment detected!"
+    NEXT_VERSION="v1"
+    OLD_VERSION="none"
+elif [ "$CURRENT_VERSION" == "v1" ]; then
+    NEXT_VERSION="v2"
+    OLD_VERSION="v1"
+else
+    NEXT_VERSION="v1"
+    OLD_VERSION="v2"
 fi
 
+echo "Current Live: $CURRENT_VERSION | Deploying Green: $NEXT_VERSION | Deleting Blue: $OLD_VERSION"
+
+# 3. Apply Deployment 
+sed "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml > k8s/deployment_tmp.yaml
+$KUBE apply -f k8s/deployment_tmp.yaml
+
+# 4. Wait for Health
+echo "Waiting for $NEXT_VERSION to be ready..."
+$KUBE rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
+
+# 5. Switch Traffic (Update Service)
+echo "Updating Service to point to $NEXT_VERSION..."
+sed "s/version: .*/version: $NEXT_VERSION/g" k8s/service.yaml > k8s/service_tmp.yaml
+$KUBE apply -f k8s/service_tmp.yaml
+
+# 6. Post-Deployment Cleanup
+if [ "$OLD_VERSION" != "none" ] && [ "$OLD_VERSION" != "$NEXT_VERSION" ]; then
+    echo "Cleanup: Removing $OLD_VERSION..."
+    $KUBE delete deployment itomata-app-$OLD_VERSION --ignore-not-found=true
+fi
+
+# 7. Update HPA
+echo "Updating HPA to track $NEXT_VERSION..."
+sed "s/itomata-app-.*/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml > k8s/hpa_tmp.yaml
+$KUBE apply -f k8s/hpa_tmp.yaml
+
+# 8. Clean up temporary files
 rm k8s/*_tmp.yaml
-echo "🚀 Success in $AWS_DEFAULT_REGION"
+
+echo "🚀 Blue/Green Deployment Complete for $AWS_DEFAULT_REGION!"
