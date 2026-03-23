@@ -1,13 +1,13 @@
 #!/bin/bash -e
 
+# --- 1. THE ROBUST AUTH FIX ---
 if [ ! -z "$KUBERNETES_TOKEN" ]; then
     echo "Using manual STS token for authentication..."
-    # We add --insecure-skip-tls-verify=true to bypass the 'provide credentials' handshake
+    # We redefine kubectl as a function that always includes the token and skips TLS checks
     kubectl() {
       command kubectl --token="$KUBERNETES_TOKEN" --insecure-skip-tls-verify=true "$@"
     }
     export -f kubectl
-    shopt -s expand_aliases
 fi
 
 export AWS_STS_REGIONAL_ENDPOINTS=regional
