@@ -1,12 +1,12 @@
 #!/bin/bash -e
 
-# --- 1. THE FOOLPROOF AUTH FIX ---
-# We define a variable 'KUBE' that contains the command, the token, and the TLS skip flag.
+# --- 1. THE ULTIMATE AUTH FIX ---
+# We define a variable that physically contains the token and the skip-tls flag
 if [ ! -z "$KUBERNETES_TOKEN" ]; then
-    echo "Using manual STS token for authentication..."
+    echo "Force-injecting STS token into all commands..."
     KUBE="kubectl --token=$KUBERNETES_TOKEN --insecure-skip-tls-verify=true"
 else
-    echo "No token found, falling back to default context..."
+    echo "No token found, using default context..."
     KUBE="kubectl"
 fi
 
@@ -16,7 +16,6 @@ export AWS_STS_REGIONAL_ENDPOINTS=regional
 rollback() {
     echo "DEPLOYMENT CRITICAL FAILURE!"
     echo "Initiating emergency cleanup of broken version: $NEXT_VERSION..."
-    # Note: Using $KUBE variable here
     $KUBE delete deployment itomata-app-$NEXT_VERSION --ignore-not-found=true
     echo "Cleanup complete. The cluster remains safely on $CURRENT_VERSION."
     exit 1
@@ -27,7 +26,7 @@ trap 'rollback' ERR
 echo "Refreshing EKS credentials..."
 
 # --- 3. Identify Current State ---
-# We use the $KUBE variable for every single call now
+# Physically using $KUBE variable for every call
 CURRENT_VERSION=$($KUBE get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")
 
 if [ "$CURRENT_VERSION" == "none" ]; then

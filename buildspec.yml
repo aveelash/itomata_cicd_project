@@ -29,14 +29,16 @@ phases:
       # --- REGION 1: MUMBAI ---
       - echo "🚀 Deploying to Mumbai (ap-south-1)..."
       - export AWS_DEFAULT_REGION=ap-south-1
+      # Create kubeconfig first
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
-      # We pass the token explicitly to the script environment
+      # Fetch the token and export it so deploy.sh sees it
       - export KUBERNETES_TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region ap-south-1 | jq -r '.status.token')
       - ./deploy.sh
 
       # --- REGION 2: VIRGINIA ---
       - echo "🚀 Deploying to Virginia (us-east-1)..."
       - export AWS_DEFAULT_REGION=us-east-1
+      # Re-fetch token for the new region context
       - aws eks update-kubeconfig --region us-east-1 --name itomata-eks-cluster
       - export KUBERNETES_TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region us-east-1 | jq -r '.status.token')
       - ./deploy.sh
