@@ -1,10 +1,20 @@
 #!/bin/bash -e
 
-# --- 1. THE ULTIMATE AUTH FIX ---
-# We define a variable that physically contains the token and the skip-tls flag
+# --- 1. THE ULTIMATE CONFIG WIPE ---
 if [ ! -z "$KUBERNETES_TOKEN" ]; then
-    echo "Force-injecting STS token into all commands..."
-    KUBE="kubectl --token=$KUBERNETES_TOKEN --insecure-skip-tls-verify=true"
+    echo "Force-injecting STS token and wiping stale configs..."
+    
+    # Get the Cluster API Endpoint and CA data automatically
+    ENDPOINT=$(aws eks describe-cluster --name itomata-eks-cluster --query "cluster.endpoint" --output text)
+    
+    # Completely overwrite the kubeconfig with a manual, static entry
+    # This bypasses the buggy 'aws eks update-kubeconfig' command
+    kubectl config set-cluster itomata --server=$ENDPOINT --insecure-skip-tls-verify=true
+    kubectl config set-credentials codebuild --token=$KUBERNETES_TOKEN
+    kubectl config set-context itomata --cluster=itomata --user=codebuild
+    kubectl config use-context itomata
+    
+    KUBE="kubectl"
 else
     echo "No token found, using default context..."
     KUBE="kubectl"
