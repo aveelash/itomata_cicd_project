@@ -1,18 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: itomata-app-v1
+  # The script will replace VERSION_PLACEHOLDER with v1 or v2
+  name: itomata-app-VERSION_PLACEHOLDER
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: itomata
-      version: v1
+      version: VERSION_PLACEHOLDER
   template:
     metadata:
       labels:
         app: itomata
-        version: v1
+        version: VERSION_PLACEHOLDER
     spec:
       containers:
         - name: frontend
