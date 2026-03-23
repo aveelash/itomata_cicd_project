@@ -1,42 +1,59 @@
 #!/bin/bash -e
 
-# --- 1. THE ULTIMATE CONFIG WIPE ---
-if [ ! -z "$KUBERNETES_TOKEN" ]; then
-    echo "Force-injecting STS token and wiping stale configs..."
-    
-    # Get the Cluster API Endpoint and CA data automatically
-    ENDPOINT=$(aws eks describe-cluster --name itomata-eks-cluster --query "cluster.endpoint" --output text)
-    
-    # Completely overwrite the kubeconfig with a manual, static entry
-    # This bypasses the buggy 'aws eks update-kubeconfig' command
-    kubectl config set-cluster itomata --server=$ENDPOINT --insecure-skip-tls-verify=true
-    kubectl config set-credentials codebuild --token=$KUBERNETES_TOKEN
-    kubectl config set-context itomata --cluster=itomata --user=codebuild
-    kubectl config use-context itomata
-    
-    KUBE="kubectl"
-else
-    echo "No token found, using default context..."
-    KUBE="kubectl"
-fi
+echo "🛠️ Configuring direct EKS access for $AWS_DEFAULT_REGION..."
 
-export AWS_STS_REGIONAL_ENDPOINTS=regional
+# 1. Wipe stale configs
+rm -rf ~/.kube/config
+mkdir -p ~/.kube
 
-# --- 2. Improved Rollback Logic ---
+# 2. Get Cluster Endpoint and Certificate Authority Data
+ENDPOINT=$(aws eks describe-cluster --name itomata-eks-cluster --region $AWS_DEFAULT_REGION --query "cluster.endpoint" --output text)
+CA_DATA=$(aws eks describe-cluster --name itomata-eks-cluster --region $AWS_DEFAULT_REGION --query "cluster.certificateAuthority.data" --output text)
+
+# 3. Manually construct the kubeconfig
+cat <<EOF > ~/.kube/config
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $CA_DATA
+    server: $ENDPOINT
+  name: eks-cluster
+contexts:
+- context:
+    cluster: eks-cluster
+    user: aws
+  name: eks-context
+current-context: eks-context
+kind: Config
+preferences: {}
+users:
+- name: aws
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      command: aws
+      args:
+        - "eks"
+        - "get-token"
+        - "--cluster-name"
+        - "itomata-eks-cluster"
+        - "--region"
+        - "$AWS_DEFAULT_REGION"
+EOF
+
+# 4. Use insecure-skip-tls-verify as a fallback for the discovery phase
+KUBE="kubectl --insecure-skip-tls-verify=true"
+
+# --- Deployment Logic Starts Here ---
+
 rollback() {
     echo "DEPLOYMENT CRITICAL FAILURE!"
-    echo "Initiating emergency cleanup of broken version: $NEXT_VERSION..."
     $KUBE delete deployment itomata-app-$NEXT_VERSION --ignore-not-found=true
-    echo "Cleanup complete. The cluster remains safely on $CURRENT_VERSION."
     exit 1
 }
-
 trap 'rollback' ERR
 
-echo "Refreshing EKS credentials..."
-
-# --- 3. Identify Current State ---
-# Physically using $KUBE variable for every call
+echo "Checking current version..."
 CURRENT_VERSION=$($KUBE get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")
 
 if [ "$CURRENT_VERSION" == "none" ]; then
@@ -51,33 +68,31 @@ else
     OLD_VERSION="v2"
 fi
 
-echo "Current Live: $CURRENT_VERSION | Deploying Green: $NEXT_VERSION | Deleting Blue: $OLD_VERSION"
+echo "Current Live: $CURRENT_VERSION | Deploying: $NEXT_VERSION"
 
-# --- 4. Safe Substitution ---
+# Apply Deployment
 sed "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml > k8s/deployment_tmp.yaml
 $KUBE apply -f k8s/deployment_tmp.yaml
 
-# --- 5. Wait for Existence & Health ---
+# Wait for Health
 echo "Waiting for $NEXT_VERSION to be ready..."
 $KUBE rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
 
-# --- 6. Switch Traffic (Update Service) ---
+# Switch Traffic
 echo "Updating Service to point to $NEXT_VERSION..."
 sed "s/version: .*/version: $NEXT_VERSION/g" k8s/service.yaml > k8s/service_tmp.yaml
 $KUBE apply -f k8s/service_tmp.yaml
 
-# --- 7. Post-Deployment Cleanup ---
+# Cleanup
 if [ "$OLD_VERSION" != "none" ] && [ "$OLD_VERSION" != "$NEXT_VERSION" ]; then
-    echo "Cleanup: Removing old version $OLD_VERSION..."
+    echo "Removing $OLD_VERSION..."
     $KUBE delete deployment itomata-app-$OLD_VERSION --ignore-not-found=true
 fi
 
-# --- 8. Update HPA ---
-echo "Updating HPA to track $NEXT_VERSION..."
+# Update HPA
+echo "Updating HPA..."
 sed "s/itomata-app-.*/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml > k8s/hpa_tmp.yaml
 $KUBE apply -f k8s/hpa_tmp.yaml
 
-# --- 9. Clean up temporary files ---
 rm k8s/*_tmp.yaml
-
-echo "🚀 Company-Grade Blue/Green Deployment Complete!"
+echo "🚀 Deployment successful in $AWS_DEFAULT_REGION!"
