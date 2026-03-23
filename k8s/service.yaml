@@ -7,12 +7,14 @@ spec:
   type: LoadBalancer
   selector:
     app: itomata
-    version: v1
+    # The script will replace this with v1 or v2 to point to the 'Green' deployment
+    version: VERSION_PLACEHOLDER
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
 ---
+# 2. BACKEND SERVICE
 apiVersion: v1
 kind: Service
 metadata:
@@ -21,6 +23,9 @@ spec:
   type: LoadBalancer
   selector:
     app: itomata
+    # Usually, the backend is internal, but since we are using
+    # Blue/Green for the whole stack, we use the placeholder here too
+    version: VERSION_PLACEHOLDER
   ports:
     - protocol: TCP
       port: 80

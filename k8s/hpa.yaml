@@ -6,7 +6,8 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: itomata-app-v1
+    # The deploy.sh script will replace this with the active version (v1 or v2)
+    name: itomata-app-VERSION_PLACEHOLDER
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -14,5 +15,6 @@ spec:
       resource:
         name: cpu
         target:
+          # Scale up if average CPU usage across pods exceeds 50%
           type: Utilization
           averageUtilization: 50
