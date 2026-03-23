@@ -2,14 +2,12 @@ version: 0.2
 
 env:
   variables:
-    # This forces the build to use regional credentials, fixing the EKS handshake
+    # Forces regional STS tokens to prevent cross-region auth lag
     AWS_STS_REGIONAL_ENDPOINTS: "regional"
 
 phases:
   pre_build:
     commands:
-      - echo "Checking directory structure..."
-      - ls -R
       - echo "Logging into Amazon ECR..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
@@ -32,13 +30,21 @@ phases:
       # --- REGION 1: MUMBAI ---
       - echo "🚀 Deploying to Mumbai (ap-south-1)..."
       - export AWS_DEFAULT_REGION=ap-south-1
+      # Clear any old config to force a fresh handshake
+      - rm -rf ~/.kube/config
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
+      - echo "Verifying Mumbai Identity..."
+      - kubectl auth can-i "*" "*"
       - ./deploy.sh
 
       # --- REGION 2: VIRGINIA ---
       - echo "🚀 Deploying to Virginia (us-east-1)..."
       - export AWS_DEFAULT_REGION=us-east-1
+      # Clear Mumbai config so Virginia starts clean
+      - rm -rf ~/.kube/config
       - aws eks update-kubeconfig --region us-east-1 --name itomata-eks-cluster
+      - echo "Verifying Virginia Identity..."
+      - kubectl auth can-i "*" "*"
       - ./deploy.sh
 
       - echo "✅ Multi-Region Blue/Green Deployment complete!"
