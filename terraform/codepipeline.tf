@@ -1,16 +1,40 @@
-# 1. Create a Connection to GitHub
+# Shared Data Source
+data "aws_caller_identity" "current" {}
+
+# 1. THE NEW IAM ROLE (Renamed to 'v2' to bypass the Access Denied error)
+resource "aws_iam_role" "codebuild_role" {
+  name = "itomata-v2-role-${var.region}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = [
+            "codebuild.amazonaws.com",
+            "codepipeline.amazonaws.com"
+          ]
+        }
+      }
+    ]
+  })
+}
+
+# 2. Create a Connection to GitHub
 resource "aws_codestarconnections_connection" "github_conn" {
   name          = "github-itomata-connection"
   provider_type = "GitHub"
 }
 
-# 2. S3 Bucket for Pipeline Artifacts
+# 3. S3 Bucket for Pipeline Artifacts
 resource "aws_s3_bucket" "pipeline_artifacts" {
   bucket_prefix = "itomata-pipeline-artifacts-"
   force_destroy = true 
 }
 
-# 3. CodeBuild Project
+# 4. CodeBuild Project
 resource "aws_codebuild_project" "itomata_build" {
   name         = "itomata-build-project"
   service_role = aws_iam_role.codebuild_role.arn
@@ -23,7 +47,7 @@ resource "aws_codebuild_project" "itomata_build" {
     compute_type    = "BUILD_GENERAL1_SMALL"
     image           = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
     type            = "LINUX_CONTAINER"
-    privileged_mode = true # Required to build Docker images
+    privileged_mode = true
 
     environment_variable {
       name  = "AWS_ACCOUNT_ID"
@@ -32,7 +56,7 @@ resource "aws_codebuild_project" "itomata_build" {
 
     environment_variable {
       name  = "AWS_DEFAULT_REGION"
-      value = var.region # Use the variable, not "ap-south-1"
+      value = var.region
     }
   }
 
@@ -42,15 +66,12 @@ resource "aws_codebuild_project" "itomata_build" {
   }
 }
 
-# 4. The actual CI/CD Pipeline
+# 5. The actual CI/CD Pipeline
 resource "aws_codepipeline" "itomata_pipeline" {
-  name     = "itomata-cicd-pipeline"
-  role_arn = aws_iam_role.codebuild_role.arn
-
-  # FIX: Set pipeline type to V2 to support the trigger block
+  name          = "itomata-cicd-pipeline"
+  role_arn      = aws_iam_role.codebuild_role.arn
   pipeline_type = "V2" 
 
-  # Trigger block for automatic execution on git push
   trigger {
     provider_type = "CodeStarSourceConnection"
     git_configuration {
@@ -104,7 +125,7 @@ resource "aws_codepipeline" "itomata_pipeline" {
   }
 }
 
-# 5. IAM Policy for CodeBuild & Pipeline Lifecycle
+# 6. IAM Policy for CodeBuild & Pipeline Lifecycle
 resource "aws_iam_role_policy" "codebuild_lifecycle" {
   name = "codebuild-lifecycle-policy"
   role = aws_iam_role.codebuild_role.id
@@ -137,9 +158,7 @@ resource "aws_iam_role_policy" "codebuild_lifecycle" {
       },
       {
         Effect = "Allow"
-        Action = [
-          "eks:DescribeCluster"
-        ]
+        Action = ["eks:DescribeCluster"]
         Resource = "*"
       },
       {
@@ -149,6 +168,29 @@ resource "aws_iam_role_policy" "codebuild_lifecycle" {
           "codestar-connections:GetConnection"
         ]
         Resource = aws_codestarconnections_connection.github_conn.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          aws_s3_bucket.pipeline_artifacts.arn,
+          "${aws_s3_bucket.pipeline_artifacts.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:TagResource"
+        ]
+        Resource = "*"
       }
     ]
   })

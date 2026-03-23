@@ -13,13 +13,16 @@ rollback() {
 trap 'rollback' ERR
 
 echo "Refreshing EKS credentials..."
-# The region/cluster name is handled by the CodePipeline environment variables or manual update-kubeconfig
 
 # 2. Identify Current State
-# We check the Service to see who is currently receiving traffic
-CURRENT_VERSION=$(kubectl get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "v1")
+# Attempt to get the current version. If the service doesn't exist, we set it to 'none'
+CURRENT_VERSION=$(kubectl get svc itomata-frontend-service -o jsonpath='{.spec.selector.version}' 2>/dev/null || echo "none")
 
-if [ "$CURRENT_VERSION" == "v1" ]; then
+if [ "$CURRENT_VERSION" == "none" ]; then
+    echo "First deployment detected!"
+    NEXT_VERSION="v1"
+    OLD_VERSION="none"
+elif [ "$CURRENT_VERSION" == "v1" ]; then
     NEXT_VERSION="v2"
     OLD_VERSION="v1"
 else
@@ -29,30 +32,29 @@ fi
 
 echo "Current Live: $CURRENT_VERSION | Deploying Green: $NEXT_VERSION | Deleting Blue: $OLD_VERSION"
 
-# 3. Safe Substitution (Using a temporary file to keep the original manifest clean)
-# This prevents the "VERSION_PLACEHOLDER is missing" error on the second run
+# 3. Safe Substitution 
 sed "s/VERSION_PLACEHOLDER/$NEXT_VERSION/g" k8s/deployment.yaml > k8s/deployment_tmp.yaml
 kubectl apply -f k8s/deployment_tmp.yaml
 
 # 4. Wait for Existence & Health
-echo "Waiting for $NEXT_VERSION to appear in EKS..."
-sleep 10 # Give the API a moment to register the new deployment
-
-echo "Verifying health of $NEXT_VERSION..."
+echo "Waiting for $NEXT_VERSION to be ready..."
+# rollout status is the gold standard for checking health
 kubectl rollout status deployment/itomata-app-$NEXT_VERSION --timeout=120s
 
 # 5. Switch Traffic (Update Service)
-# We create a temp service file to avoid corrupting the original
+echo "Updating Service to point to $NEXT_VERSION..."
 sed "s/version: .*/version: $NEXT_VERSION/g" k8s/service.yaml > k8s/service_tmp.yaml
 kubectl apply -f k8s/service_tmp.yaml
 
 # 6. Post-Deployment Cleanup
-if [ "$CURRENT_VERSION" != "none" ] && [ "$CURRENT_VERSION" != "$NEXT_VERSION" ]; then
+# Only delete if there actually was an old version to remove
+if [ "$OLD_VERSION" != "none" ] && [ "$OLD_VERSION" != "$NEXT_VERSION" ]; then
     echo "Cleanup: Removing $OLD_VERSION..."
     kubectl delete deployment itomata-app-$OLD_VERSION --ignore-not-found=true
 fi
 
 # 7. Update HPA
+echo "Updating HPA to track $NEXT_VERSION..."
 sed "s/itomata-app-.*/itomata-app-$NEXT_VERSION/g" k8s/hpa.yaml > k8s/hpa_tmp.yaml
 kubectl apply -f k8s/hpa_tmp.yaml
 
