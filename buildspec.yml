@@ -30,21 +30,23 @@ phases:
       # --- REGION 1: MUMBAI ---
       - echo "🚀 Deploying to Mumbai (ap-south-1)..."
       - export AWS_DEFAULT_REGION=ap-south-1
-      # Clear any old config to force a fresh handshake
       - rm -rf ~/.kube/config
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
-      - echo "Verifying Mumbai Identity..."
-      - kubectl auth can-i "*" "*"
-      - ./deploy.sh
+      # Generate a manual token to bypass 'Unauthorized' errors
+      - export KUBE_TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region ap-south-1 | jq -r '.status.token')
+      - echo "Verifying Mumbai Identity with Token..."
+      - kubectl --token=$KUBE_TOKEN auth can-i "*" "*"
+      - KUBERNETES_TOKEN=$KUBE_TOKEN ./deploy.sh
 
       # --- REGION 2: VIRGINIA ---
       - echo "🚀 Deploying to Virginia (us-east-1)..."
       - export AWS_DEFAULT_REGION=us-east-1
-      # Clear Mumbai config so Virginia starts clean
       - rm -rf ~/.kube/config
       - aws eks update-kubeconfig --region us-east-1 --name itomata-eks-cluster
-      - echo "Verifying Virginia Identity..."
-      - kubectl auth can-i "*" "*"
-      - ./deploy.sh
+      # Generate a fresh token for the second region
+      - export KUBE_TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region us-east-1 | jq -r '.status.token')
+      - echo "Verifying Virginia Identity with Token..."
+      - kubectl --token=$KUBE_TOKEN auth can-i "*" "*"
+      - KUBERNETES_TOKEN=$KUBE_TOKEN ./deploy.sh
 
       - echo "✅ Multi-Region Blue/Green Deployment complete!"
