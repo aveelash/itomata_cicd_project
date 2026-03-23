@@ -2,7 +2,6 @@ version: 0.2
 
 env:
   variables:
-    # Forces regional STS tokens to prevent cross-region auth lag
     AWS_STS_REGIONAL_ENDPOINTS: "regional"
 
 phases:
@@ -30,23 +29,13 @@ phases:
       # --- REGION 1: MUMBAI ---
       - echo "🚀 Deploying to Mumbai (ap-south-1)..."
       - export AWS_DEFAULT_REGION=ap-south-1
-      - rm -rf ~/.kube/config
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
-      # Generate a manual token to bypass 'Unauthorized' errors
-      - export KUBE_TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region ap-south-1 | jq -r '.status.token')
-      - echo "Verifying Mumbai Identity with Token..."
-      - kubectl --token=$KUBE_TOKEN auth can-i "*" "*"
-      - KUBERNETES_TOKEN=$KUBE_TOKEN ./deploy.sh
+      - ./deploy.sh
 
       # --- REGION 2: VIRGINIA ---
       - echo "🚀 Deploying to Virginia (us-east-1)..."
       - export AWS_DEFAULT_REGION=us-east-1
-      - rm -rf ~/.kube/config
       - aws eks update-kubeconfig --region us-east-1 --name itomata-eks-cluster
-      # Generate a fresh token for the second region
-      - export KUBE_TOKEN=$(aws eks get-token --cluster-name itomata-eks-cluster --region us-east-1 | jq -r '.status.token')
-      - echo "Verifying Virginia Identity with Token..."
-      - kubectl --token=$KUBE_TOKEN auth can-i "*" "*"
-      - KUBERNETES_TOKEN=$KUBE_TOKEN ./deploy.sh
+      - ./deploy.sh
 
       - echo "✅ Multi-Region Blue/Green Deployment complete!"
