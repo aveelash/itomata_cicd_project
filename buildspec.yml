@@ -2,7 +2,6 @@ version: 0.2
 
 env:
   variables:
-    # Explicitly setting Mumbai as the default for this project
     AWS_DEFAULT_REGION: "ap-south-1"
     AWS_STS_REGIONAL_ENDPOINTS: "regional"
 
@@ -27,10 +26,8 @@ phases:
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/itomata-backend:latest
 
       - chmod +x deploy.sh
-
-      # --- SINGLE REGION DEPLOYMENT: MUMBAI ---
-      - echo "🚀 Configuring context for Mumbai (ap-south-1)..."
+      - echo "Configuring context for Mumbai (ap-south-1)..."
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
       - ./deploy.sh
 
-      - echo "✅ Deployment complete!"
+      - echo "Deployment complete!"
