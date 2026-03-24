@@ -4,7 +4,7 @@ metadata:
   # The script will replace VERSION_PLACEHOLDER with v1 or v2
   name: itomata-app-VERSION_PLACEHOLDER
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: itomata
