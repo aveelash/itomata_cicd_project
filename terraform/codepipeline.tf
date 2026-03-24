@@ -86,7 +86,7 @@ resource "aws_codepipeline" "itomata_pipeline" {
 
   artifact_store {
     location = aws_s3_bucket.pipeline_artifacts.bucket
-    type     = "S3"
+    type      = "S3"
   }
 
   stage {
@@ -125,7 +125,7 @@ resource "aws_codepipeline" "itomata_pipeline" {
   }
 }
 
-# 6. IAM Policy for CodeBuild & Pipeline Lifecycle
+# 6. IAM Policy - Added ECR and EKS Permissions
 resource "aws_iam_role_policy" "codebuild_lifecycle" {
   name = "codebuild-lifecycle-policy"
   role = aws_iam_role.codebuild_role.id
@@ -148,6 +148,7 @@ resource "aws_iam_role_policy" "codebuild_lifecycle" {
           "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
+          "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
           "ecr:PutImage",
           "ecr:InitiateLayerUpload",
@@ -158,7 +159,10 @@ resource "aws_iam_role_policy" "codebuild_lifecycle" {
       },
       {
         Effect = "Allow"
-        Action = ["eks:DescribeCluster"]
+        Action = [
+            "eks:DescribeCluster",
+            "eks:ListClusters"
+        ]
         Resource = "*"
       },
       {
@@ -187,11 +191,31 @@ resource "aws_iam_role_policy" "codebuild_lifecycle" {
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:TagResource"
+          "logs:PutLogEvents"
         ]
         Resource = "*"
       }
     ]
   })
+}
+
+# 7. NEW: AUTOMATED EKS ACCESS ENTRY
+# This removes the need to run the PowerShell commands manually!
+resource "aws_eks_access_entry" "codebuild" {
+  cluster_name      = var.cluster_name
+  principal_arn     = aws_iam_role.codebuild_role.arn
+  user_name         = "codebuild-admin"
+  type              = "STANDARD"
+  depends_on        = [module.eks]
+}
+
+resource "aws_eks_access_policy_association" "codebuild_admin" {
+  cluster_name  = var.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_iam_role.codebuild_role.arn
+
+  access_scope {
+    type = "cluster"
+  }
+  depends_on = [aws_eks_access_entry.codebuild]
 }

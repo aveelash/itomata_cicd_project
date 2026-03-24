@@ -1,7 +1,7 @@
 variable "region" {
   description = "The AWS region to deploy in"
   type        = string
-  # No default here, we will provide it during 'apply'
+  default     = "ap-south-1"
 }
 
 variable "cluster_name" {
@@ -16,7 +16,7 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-# Add this for dynamic Availability Zones
 variable "azs" {
   type    = list(string)
+  default = ["ap-south-1a", "ap-south-1b"]
 }

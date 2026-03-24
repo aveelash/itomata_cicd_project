@@ -2,6 +2,8 @@ version: 0.2
 
 env:
   variables:
+    # Explicitly setting Mumbai as the default for this project
+    AWS_DEFAULT_REGION: "ap-south-1"
     AWS_STS_REGIONAL_ENDPOINTS: "regional"
 
 phases:
@@ -26,16 +28,9 @@ phases:
 
       - chmod +x deploy.sh
 
-      # --- REGION 1: MUMBAI ---
+      # --- SINGLE REGION DEPLOYMENT: MUMBAI ---
       - echo "🚀 Configuring context for Mumbai (ap-south-1)..."
-      - export AWS_DEFAULT_REGION=ap-south-1
       - aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster
       - ./deploy.sh
 
-      # --- REGION 2: VIRGINIA ---
-      - echo "🚀 Configuring context for Virginia (us-east-1)..."
-      - export AWS_DEFAULT_REGION=us-east-1
-      - aws eks update-kubeconfig --region us-east-1 --name itomata-eks-cluster
-      - ./deploy.sh
-
-      - echo "✅ Multi-Region Blue/Green Deployment complete!"
+      - echo "✅ Deployment complete!"
