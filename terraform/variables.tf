@@ -1,7 +1,7 @@
 variable "region" {
-  description = "The AWS region to deploy in"
+  description = "The AWS region to deploy into"
   type        = string
-  default     = "ap-south-1"
+  # No default value here makes it easier to switch during a disaster
 }
 
 variable "cluster_name" {
@@ -17,6 +17,6 @@ variable "vpc_cidr" {
 }
 
 variable "azs" {
-  type    = list(string)
-  default = ["ap-south-1a", "ap-south-1b"]
+  description = "Availability zones"
+  type        = list(string)
 }
