@@ -17,13 +17,13 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:failed-v3
+          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
           ports:
             - containerPort: 80
           resources:
             requests:
               memory: "128Mi"
-              cpu: "100m"
+              cpu: "150m"
             limits:
               memory: "256Mi"
               cpu: "200m"
