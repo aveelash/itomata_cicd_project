@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
+          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:broken-v3
           ports:
             - containerPort: 80
           resources:
