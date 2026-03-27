@@ -48,10 +48,11 @@ Resilience: In the event of a primary region failure, the entire infrastructure 
 To run this setup on your local machine, ensure you have AWS CLI, Terraform, and Kubectl installed.
 
 #### Step 1: Provision Infrastructure
-`
-cd terraform
-terraform init
-terraform apply -var="region=ap-south-1" -var='azs=["ap-south-1a", "ap-south-1b"]'`
+`cd terraform`
+
+`terraform init`
+
+`terraform apply -var="region=ap-south-1" -var='azs=["ap-south-1a", "ap-south-1b"]'`
 
 #### Step 2: Connect & Deploy
 
@@ -59,15 +60,16 @@ terraform apply -var="region=ap-south-1" -var='azs=["ap-south-1a", "ap-south-1b"
 `aws eks update-kubeconfig --region ap-south-1 --name itomata-eks-cluster`
 
 ##### Deploy Application Stack
-`
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-kubectl apply -f ../k8s/deployment.yaml
-kubectl apply -f ../k8s/service.yaml`
+`kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml`
+
+`kubectl apply -f ../k8s/deployment.yaml`
+
+`kubectl apply -f ../k8s/service.yaml`
 
 #### Step 3: Trigger Scale-Up (Stress Test)
-`
-kubectl run load-generator --image=busybox --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://itomata-frontend-service; done"
-kubectl get hpa -w`
+`kubectl run load-generator --image=busybox --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://itomata-frontend-service; done"`
+
+`kubectl get hpa -w`
 
 #### Step 4: Clean Up (Cost Control)
 `terraform destroy -var="region=ap-south-1" -var='azs=["ap-south-1a", "ap-south-1b"]'`
