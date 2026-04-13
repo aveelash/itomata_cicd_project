@@ -17,6 +17,7 @@ spec:
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
           ports:
             - containerPort: 80
+
           resources:
             requests:
               memory: "128Mi"
@@ -24,3 +25,28 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "200m"
+
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            failureThreshold: 12
+            periodSeconds: 5
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 2
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 2
