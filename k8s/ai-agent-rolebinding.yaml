@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: itomata-ai-agent-rolebinding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: itomata-ai-agent-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: itomata-ai-agent-role
+  apiGroup: rbac.authorization.k8s.io

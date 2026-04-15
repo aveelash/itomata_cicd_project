@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: itomata-ai-agent
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: itomata-ai-agent
+  template:
+    metadata:
+      labels:
+        app: itomata-ai-agent
+    spec:
+      serviceAccountName: itomata-ai-agent-sa
+      containers:
+        - name: ai-agent
+          image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-ai-agent:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
