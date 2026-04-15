@@ -15,6 +15,7 @@ spec:
       containers:
         - name: frontend
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
 
