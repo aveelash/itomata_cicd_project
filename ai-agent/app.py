@@ -1,10 +1,14 @@
 import time
+from dotenv import load_dotenv
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 
 from kube_config import load_kube_config
 from analyzer import analyze_pod
 from printer import print_pod_report
+from llm_analyzer import get_llm_explanation
+
+load_dotenv()
 
 # Stores when a pod first became unhealthy
 unhealthy_since = {}
@@ -44,6 +48,12 @@ def check_pods():
         for pod in pods.items:
             result = analyze_pod(v1, pod, unhealthy_since)
             print_pod_report(result)
+
+            # Call ChatGPT only for unhealthy pods
+            print("\n[LLM Diagnosis]")
+            explanation = get_llm_explanation(result)
+            print(explanation)
+            print("-" * 50)
 
             pod_name = result["pod_name"]
 

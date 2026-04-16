@@ -18,6 +18,14 @@ spec:
         - name: ai-agent
           image: 795732143548.dkr.ecr.ap-south-1.amazonaws.com/itomata-ai-agent:latest
           imagePullPolicy: Always
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-secret
+                  key: OPENAI_API_KEY
+            - name: OPENAI_MODEL
+              value: "gpt-4o-mini"
           resources:
             requests:
               memory: "128Mi"
