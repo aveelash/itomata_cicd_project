@@ -50,10 +50,11 @@ def check_pods():
             print_pod_report(result)
 
             # Call ChatGPT only for unhealthy pods
-            print("\n[LLM Diagnosis]")
-            explanation = get_llm_explanation(result)
-            print(explanation)
-            print("-" * 50)
+            if result.get("issue_type") != "healthy":
+                print("\n[LLM Diagnosis]")
+                explanation = get_llm_explanation(result)
+                print(explanation)
+                print("-" * 50)
 
             pod_name = result["pod_name"]
 
